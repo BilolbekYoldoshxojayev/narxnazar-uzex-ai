@@ -1,0 +1,21 @@
+services:
+  - type: web
+    name: uzex-ai-agent
+    runtime: docker
+    plan: free
+    region: frankfurt
+    healthCheckPath: /health
+    autoDeploy: true
+    envVars:
+      - key: GEMINI_API_KEYS
+        sync: false
+      - key: GROQ_API_KEYS
+        sync: false
+      - key: CEREBRAS_API_KEYS
+        sync: false
+      - key: OPENROUTER_API_KEYS
+        sync: false
+      - key: TELEGRAM_BOT_TOKEN
+        sync: false
+      - key: TELEGRAM_SECRET
+        generateValue: true

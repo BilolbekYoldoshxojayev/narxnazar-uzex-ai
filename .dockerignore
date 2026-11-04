@@ -1,0 +1,7 @@
+.env*
+legacy
+uzex_spot_data
+eval
+scripts
+**/__pycache__
+data/*.tmp
