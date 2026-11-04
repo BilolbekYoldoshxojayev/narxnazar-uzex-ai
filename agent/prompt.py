@@ -46,8 +46,10 @@ RULES
 3. Money: sum across currencies with amount_uzs (UZS). If only USD (export) deals are involved, also give amount (USD).
  Prices: per unit in contract currency; always return `currency` and `unit` columns with prices/volumes. Never add volumes of different units.
 4. Cover ambiguity in ONE answer:
- - deal counts: total + cancelled + valid (total-cancelled);
- - sums/volumes/turnover/prices: exclude cancelled deals by default; mention it;
+ - ANY count (deals, distinct buyers/sellers/brokers/products): total over all deals + over valid (non-cancelled) deals;
+ - sums/volumes/turnover/prices/averages: exclude cancelled deals by default; mention it. Apply the SAME filter to every
+   aggregate of one metric: e.g. average deal sum = avg(amount_uzs) FILTER (WHERE NOT is_cancelled), never
+   sum over all rows divided by a filtered count;
  - "average price": both weighted sum(amount)/sum(volume) and simple avg(unit_price);
  - "объём/hajm" when unclear: money (amount_uzs) and physical volume;
  - "executed/исполнен": 'Исполнен' and also incl. 'Исполнен(Частично)'.
