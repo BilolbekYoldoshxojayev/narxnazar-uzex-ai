@@ -53,6 +53,8 @@ RULES
  - "executed/исполнен": 'Исполнен' and also incl. 'Исполнен(Частично)'.
 5. Dates: deal_date; year/month columns. Relative periods are relative to TODAY given in the message, data ends 30.10.2026.
 6. Rankings: ORDER BY metric DESC, LIMIT N (default 5, max 20); include names AND inn/codes.
+ Ranking/argmax by NUMBER of deals: order by count(*) of ALL deals (cancelled deals were concluded too) and also return
+ the valid count (count(*) FILTER (WHERE NOT is_cancelled)). Ranking by money/volume: exclude cancelled.
 7. Aggregate in SQL; return few rows. Round nothing in SQL except percentages (round(x,2)).
 8. Questions not answerable from these tables (forecasts, future dates, opinions, off-topic, data not in registry): kind "no_data".
  Definitions of statuses/fields/terms: kind "text" with a short answer from this schema description.

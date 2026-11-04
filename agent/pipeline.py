@@ -60,6 +60,21 @@ def _sig(p: dict):
     return tuple(sorted(rows, key=repr))
 
 
+def _agree(a: dict, b: dict) -> bool:
+    """Same answer: equal kinds; for SQL, same row count and each row's values of one draft contained in the other's
+    (one draft may return extra helper columns such as cancelled counts)."""
+    sa, sb = _sig(a), _sig(b)
+    if sa is None or sb is None:
+        return False
+    if sa == sb:
+        return True
+    if a.get("kind") != "sql" or b.get("kind") != "sql" or len(a["rows"]) != len(b["rows"]) or not a["rows"]:
+        return False
+    pairs = list(zip(sa, sb))
+    return all(set(x) <= set(y) or set(y) <= set(x) for x, y in pairs) and any(
+        any(isinstance(v, (int, float)) for v in (x if len(x) <= len(y) else y)) for x, y in pairs)
+
+
 def _empty(p: dict) -> bool:
     if p.get("kind") != "sql" or "err" in p:
         return False
@@ -178,9 +193,8 @@ async def answer(question: str) -> dict:
     chosen, agreed = None, False
     ok = [p for p in (a, b) if p and "err" not in p]
     if len(ok) == 2:
-        sa, sb = _sig(a), _sig(b)
-        if sa == sb:
-            chosen, agreed = a, True
+        if _agree(a, b):  # prefer the richer draft (more columns = breakdown of both interpretations)
+            chosen, agreed = (a if len(a.get("cols", [])) >= len(b.get("cols", [])) else b), True
         else:
             chosen = await _arbitrate(user, a, b, deadline) or a
     elif ok:

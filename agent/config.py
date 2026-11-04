@@ -34,7 +34,7 @@ PROVIDERS = {
                _list("GEMINI_MODELS") or ["gemini-3.5-flash", "gemini-3-flash-preview", "gemini-3.8-flash",
                                           "gemini-3.7-flash", "gemini-flash-latest", "gemini-3.5-flash-lite"]),
     "groq": (_list("GROQ_API_KEYS", "GROQ_API_KEY"),
-             _list("GROQ_MODELS") or ["openai/gpt-oss-120b", "llama-3.3-70b-versatile", "qwen/qwen3-32b"]),
+             _list("GROQ_MODELS") or ["openai/gpt-oss-120b", "qwen/qwen3.8-27b", "openai/gpt-oss-20b"]),
     "cerebras": (_list("CEREBRAS_API_KEYS", "CEREBRAS_API_KEY"), _list("CEREBRAS_MODELS") or ["gpt-oss-120b"]),
     "openrouter": (_list("OPENROUTER_API_KEYS", "OPENROUTER_API_KEY"),
                    _list("OPENROUTER_MODELS") or ["openai/gpt-oss-120b:free", "deepseek/deepseek-chat-v3.1:free"]),

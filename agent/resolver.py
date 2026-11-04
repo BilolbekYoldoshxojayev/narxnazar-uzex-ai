@@ -21,15 +21,24 @@ def detect_lang(q: str) -> str:
 
 # ---------------- dictionaries (loaded once) ----------------
 def _stem(w: str) -> str:
-    return w[:-3] if len(w) >= 9 else w[:-2] if len(w) >= 7 else w[:-1] if len(w) >= 5 else w
+    if len(w) >= 9:
+        return w[:-3]
+    if len(w) >= 7:
+        return w[:-2]
+    return re.sub(r"[aeiouy]+$", "", w) if len(w) >= 4 else w  # мука -> muk (muki, muku)
 
 
-def _terms(*texts: str) -> list[list[str]]:
+def _rstem(w: str) -> str:  # regions: no vowel stripping ("navoiy" must not become "nav")
+    return w[:-3] if len(w) >= 9 else w[:-2] if len(w) >= 7 else w
+
+
+def _terms(*texts: str, stem=None) -> list[list[str]]:
+    stem = stem or _stem
     out = []
     for t in texts:
         for part in t.split(","):
             k = re.sub(r"[^a-z0-9 ]", " ", text_key(part))
-            words = [_stem(w) for w in k.split() if len(w) > 1]
+            words = [stem(w) for w in k.split() if len(w) > 1]
             if words:
                 out.append(words)
     return out
@@ -48,7 +57,7 @@ _VARIANTS = db.raw("""SELECT product, list(DISTINCT marka) FILTER (marka IS NOT 
                       list(DISTINCT ptype) FILTER (ptype IS NOT NULL), list(DISTINCT sort) FILTER (sort IS NOT NULL),
                       list(DISTINCT klass) FILTER (klass IS NOT NULL), list(DISTINCT unit) FROM product_variants GROUP BY 1""")
 _VAR = {r[0]: [x or [] for x in r[1:]] for r in _VARIANTS}
-_REGIONS = [(r, ru, _terms(r, ru, cyr, al)) for r, ru, cyr, al in db.raw("SELECT * FROM regions")]
+_REGIONS = [(r, ru, _terms(r, ru, cyr, al, stem=_rstem)) for r, ru, cyr, al in db.raw("SELECT * FROM regions")]
 _PART = db.raw("SELECT inn, name, name_key, role, region FROM participants")
 _GENERIC = re.compile(r"\b(broker\w*|birja\w*|kompaniya\w*|firma\w*|savdo|uyi|idorasi|guruhi|group|trade|treyd)\b")
 
@@ -82,8 +91,8 @@ def _best(terms: list[list[str]], qwords: list[str]):
     return max(hits, key=lambda t: len("".join(t)), default=None)
 
 
-def _subsumed(t: list[str], others: list[list[str]]) -> bool:
-    return any(set(t) < set(o) for o in others)
+def _hitset(t: list[str], qwords: list[str]) -> set:
+    return {q for w in t for q in qwords if _word_hit(w, q)}
 
 
 def _alnum(s: str) -> str:
@@ -98,7 +107,8 @@ def resolve(q: str) -> list[str]:
 
     # products (+ attribute values present in the question)
     found = [(t, p) for p, uz, terms in _PRODUCTS if (t := _best(terms, qwords))]
-    found = [(t, p) for t, p in found if not _subsumed(t, [o for o, _ in found])]
+    hs = {p: _hitset(t, qwords) for t, p in found}  # drop products whose matched words are inside another's
+    found = [(t, p) for t, p in found if not any(hs[p] < hs[o] for _, o in found)]
     found.sort(key=lambda x: -len("".join(x[0])))
     for _, p in found[:3]:
         markas, sizes, ptypes, sorts, klasses, units = _VAR.get(p, ([], [], [], [], [], []))
