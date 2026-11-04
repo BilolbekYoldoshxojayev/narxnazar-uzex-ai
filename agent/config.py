@@ -34,7 +34,7 @@ PROVIDERS = {
                _list("GEMINI_MODELS") or ["gemini-3.5-flash", "gemini-3-flash-preview", "gemini-3.8-flash",
                                           "gemini-3.7-flash", "gemini-flash-latest", "gemini-3.5-flash-lite", "gemma-4-31b-it"]),
     "groq": (_list("GROQ_API_KEYS", "GROQ_API_KEY"),
-             _list("GROQ_MODELS") or ["openai/gpt-oss-120b", "qwen/qwen3.8-27b", "openai/gpt-oss-20b"]),
+             _list("GROQ_MODELS") or ["openai/gpt-oss-120b", "qwen/qwen3.8-27b"]),
     "cerebras": (_list("CEREBRAS_API_KEYS", "CEREBRAS_API_KEY"), _list("CEREBRAS_MODELS") or ["gpt-oss-120b"]),
     "openrouter": (_list("OPENROUTER_API_KEYS", "OPENROUTER_API_KEY"),
                    _list("OPENROUTER_MODELS") or ["openai/gpt-oss-120b:free", "deepseek/deepseek-chat-v3.1:free"]),
@@ -50,6 +50,6 @@ TELEGRAM_SECRET = os.environ.get("TELEGRAM_SECRET", "uzex-" + (TELEGRAM_TOKEN.sp
 PUBLIC_URL = (os.environ.get("PUBLIC_URL") or os.environ.get("RENDER_EXTERNAL_URL") or "").rstrip("/")
 
 LLM_TIMEOUT = float(os.environ.get("LLM_TIMEOUT", "20"))
-TOTAL_BUDGET = float(os.environ.get("TOTAL_BUDGET", "70"))
+TOTAL_BUDGET = float(os.environ.get("TOTAL_BUDGET", "60"))
 DUAL = os.environ.get("DUAL", "1") == "1"  # run two independent models and cross-check
 SECOND_GRACE = float(os.environ.get("SECOND_GRACE", "12"))  # max wait for the 2nd draft after the 1st is ready
