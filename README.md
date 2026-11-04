@@ -6,6 +6,8 @@ aniq va **faqat ma’lumotlar asosida** javob beradigan AI-agent. Telegram-bot +
 > Har bir raqam SQL so‘rov natijasidan olinadi — til modeli raqamlarni o‘zi yozmaydi.
 > Каждое число в ответе берётся из результата SQL-запроса — языковая модель сама цифры не пишет.
 
+**Telegram:** https://t.me/NarxNazarAI · **Veb:** https://narxnazar-uzex-ai.onrender.com
+
 ## Arxitektura / Архитектура
 
 ```
