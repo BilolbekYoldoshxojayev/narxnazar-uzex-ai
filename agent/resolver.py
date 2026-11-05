@@ -203,7 +203,7 @@ def _names(q: str, used: set) -> list[str]:
         return out
     for cand in cands:
         for keys, rows, kind in ((_PART_KEYS, _PART, "participant"), (_BROKER_KEYS, _BROKERS, "broker")):
-            cut = 86 if " " in cand else 90
+            cut = 86 if " " in cand else 95  # one ordinary word ~ company name ("qisman"~"qiman", "cherez"~"herez"): too risky
             for _, score, idx in process.extract(cand, keys, scorer=fuzz.ratio, limit=3, score_cutoff=cut):
                 r = rows[idx]
                 if (kind, idx) in seen:
