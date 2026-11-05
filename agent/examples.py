@@ -111,6 +111,10 @@ LIB = [
          a="Reyestrda yuk boriladigan davlat haqida maydon yo‘q, shuning uchun davlatlarni aytib bo‘lmaydi. Paxta bo‘yicha eksport bitimlari faqat ip-kalava (paxta ipi) bo‘yicha bor:",
          r="{product} — {n} ta bitim ({n_valid} tasi amalga oshgan), {vol} {unit}, {total_usd} USD",
          n="Paxta xomashyosi faqat ichki bozorda sotilgan; bekor qilingan bitimlar hajm va summaga kiritilmagan."),
+    dict(q="Qaysi broker eng faol?",
+         sql="WITH b AS (SELECT seller_broker AS code, seller_broker_name AS name, 'sell' AS side, is_cancelled FROM deals UNION ALL SELECT buyer_broker, buyer_broker_name, 'buy', is_cancelled FROM deals) SELECT code, any_value(name) AS name, count(*) AS n, count(*) FILTER (WHERE side='sell') AS n_sell, count(*) FILTER (WHERE side='buy') AS n_buy, count(*) FILTER (WHERE NOT is_cancelled) AS n_valid FROM b GROUP BY code ORDER BY n DESC LIMIT 5",
+         a="Eng faol brokerlar (sotuvchi va xaridor tomonidagi bitimlar jami):", r="{i}. {name} ({code}) — {n} ta bitim: sotuvchi tomonida {n_sell}, xaridor tomonida {n_buy}; amalga oshgan {n_valid}",
+         n="Butun davr 03.01.2022–30.10.2026; bitta bitimda ikkala tomon brokeri hisoblanadi."),
 ]
 
 

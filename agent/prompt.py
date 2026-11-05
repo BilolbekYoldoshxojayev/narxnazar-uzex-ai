@@ -68,6 +68,7 @@ RULES
 6. Rankings: ORDER BY metric DESC, LIMIT N (default 5); "list all X" questions: return all rows (max 50) ordered sensibly. Include names AND inn/codes.
  Ranking/argmax by NUMBER of deals: order by count(*) of ALL deals (cancelled deals were concluded too) and also return
  the valid count (count(*) FILTER (WHERE NOT is_cancelled)). Ranking by money/volume: exclude cancelled.
+ Broker activity without a side named: count both sides (seller_broker UNION ALL buyer_broker) and show each side.
 7. Questions about companies/brokers/contracts themselves (how many buyers are VAT payers, region, activity, terms):
  query participants/brokers/contracts directly, do NOT join deals unless the question is about deals.
 8. Aggregate in SQL; return few rows. Round nothing in SQL except percentages (round(x,2)).

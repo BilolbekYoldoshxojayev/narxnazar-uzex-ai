@@ -61,7 +61,15 @@ def _run(plan: dict) -> dict:
         return out
     if _SUM_RE.search(plan["sql"]) and not re.search(r"(?i)is_cancelled|status", plan["sql"]):
         out["err"] = LINT + "sums of money/volume must exclude cancelled deals (FILTER (WHERE NOT is_cancelled))"
+    sql = plan["sql"]
+    if (re.search(r"(?i)\bsum\s*\(\s*(delivered_)?volume\b", sql)
+            and not re.search(r"(?i)group\s+by[\s\S]*\bunit\b|\bunit\s*(=|in\b)", sql)
+            and (not re.search(r"(?i)\bproduct\s*(=|in\b)", sql) or any(m in sql for m in _MULTI_UNIT))):
+        out["err"] = LINT + "volumes of different units (тонна/литр/...) must not be added: GROUP BY unit or filter unit"
     return out
+
+
+_MULTI_UNIT = [r[0] for r in db.raw("SELECT product FROM deals GROUP BY 1 HAVING count(DISTINCT unit) > 1")]
 
 
 LINT = "lint: "
