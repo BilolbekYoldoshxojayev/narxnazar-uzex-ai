@@ -1,5 +1,5 @@
 """System prompt (stable, cache-friendly prefix) + per-question user message."""
-from . import db
+from . import db, examples
 
 _PRODUCTS = ", ".join(r[0] for r in db.raw("SELECT product FROM products ORDER BY 1"))
 
@@ -23,7 +23,13 @@ TABLE deals (1 row = 1 deal):
  status, is_cancelled BOOL (status='Аннулирован(Не оплачен)'),
  seller_inn, seller_name, seller_region, buyer_inn, buyer_name, buyer_region (company registration region),
  seller_broker ('BK001'..), seller_broker_name, buyer_broker, buyer_broker_name,
- pay_date DATE, delivery_date DATE (NULL = not yet), delivered_lots INT, delivered_volume.
+ pay_date DATE, delivery_date DATE (NULL = not yet), delivered_lots INT, delivered_volume,
+ contract terms copied into each deal: pay_term_days, delivery_term_days, deposit_pct, base_price, delivery_basis;
+ derived: pay_due_date = deal_date+pay_term_days, delivery_due_date = pay_date+delivery_term_days,
+ pay_days = pay_date-deal_date, delivery_days = delivery_date-pay_date, is_pay_late, is_delivery_late BOOL (delivered after
+ the delivery term = просрочка поставки / yetkazib berish muddati buzilgan), deposit_amount = amount*deposit_pct/100 (contract currency),
+ price_change_pct = (unit_price/start_price-1)*100 (auction price move vs start price).
+ deal_id is a running number growing with time; some numbers are skipped (skipped count = max-min+1-count).
 TABLE contracts: contract_id, product, product_name_raw, sort, klass, marka, size, ptype, hs_code, category, product_group, industry,
  unit, lot_size, currency, base_price (per unit at registration), deposit_pct INT (% of deal sum), delivery_basis ('EXW'|'FCA'|'CPT'|'DAP'),
  packaging, region, region_ru, warehouse_address, trade_type, contract_type, contract_form, pay_term_days (days from deal date),
@@ -52,9 +58,10 @@ RULES
    sum over all rows divided by a filtered count;
  - "average price": both weighted sum(amount)/sum(volume) and simple avg(unit_price);
  - "объём/hajm" when unclear: money (amount_uzs) and physical volume;
- - "executed/исполнен": 'Исполнен' and also incl. 'Исполнен(Частично)'.
+ - "executed/исполнен": 'Исполнен' and also incl. 'Исполнен(Частично)';
+ - "поставлено/поставленного/yetkazilgan" volume: sold volume (sum(volume)) AND actually delivered (sum(delivered_volume)).
 5. Dates: deal_date; year/month columns. Relative periods are relative to TODAY given in the message, data ends 30.10.2026.
-6. Rankings: ORDER BY metric DESC, LIMIT N (default 5, max 20); include names AND inn/codes.
+6. Rankings: ORDER BY metric DESC, LIMIT N (default 5); "list all X" questions: return all rows (max 50) ordered sensibly. Include names AND inn/codes.
  Ranking/argmax by NUMBER of deals: order by count(*) of ALL deals (cancelled deals were concluded too) and also return
  the valid count (count(*) FILTER (WHERE NOT is_cancelled)). Ranking by money/volume: exclude cancelled.
 7. Questions about companies/brokers/contracts themselves (how many buyers are VAT payers, region, activity, terms):
@@ -73,8 +80,6 @@ Templates use {{column}} placeholders that the program fills with formatted numb
 EXAMPLES
 Q[ru]: Сколько сделок по карбамиду было в 2025 году?  HINTS: product='Карбамид (мочевина)'
 {{"kind":"sql","sql":"SELECT count(*) AS n, count(*) FILTER (WHERE is_cancelled) AS n_cancel, count(*) FILTER (WHERE NOT is_cancelled) AS n_valid FROM deals WHERE product='Карбамид (мочевина)' AND year=2025","answer":"В 2025 году по карбамиду заключено {{n}} сделок: из них {{n_cancel}} аннулированы, состоялись {{n_valid}}.","row":"","note":"Учтены все варианты названия товара (карбамид, мочевина).","nodata":"Сделок по карбамиду в 2025 году нет."}}
-Q[uz]: 2024-yilda Toshkent shahridan sotilgan shakar summasi va hajmi qancha?  HINTS: product='Сахар'; region='Toshkent shahri'
-{{"kind":"sql","sql":"SELECT sum(amount_uzs) AS total, sum(volume) AS vol, any_value(unit) AS unit, count(*) AS n, (SELECT count(*) FROM deals WHERE product='Сахар' AND region='Toshkent shahri' AND year=2024 AND is_cancelled) AS n_cancel FROM deals WHERE product='Сахар' AND region='Toshkent shahri' AND year=2024 AND NOT is_cancelled","answer":"2024-yilda Toshkent shahri omborlaridan sotilgan shakar: {{total}} so‘m, hajmi {{vol}} {{unit}} ({{n}} ta bitim).","row":"","note":"Bekor qilingan {{n_cancel}} ta bitim hisobga olinmadi.","nodata":"Ma’lumot topilmadi."}}
 Q[ru]: Топ-3 покупателя аммиачной селитры по объёму в 2026 году  HINTS: product='Аммиачная селитра'
 {{"kind":"sql","sql":"SELECT buyer_name, buyer_inn, sum(volume) AS vol, any_value(unit) AS unit, sum(amount_uzs) AS total FROM deals WHERE product='Аммиачная селитра' AND year=2026 AND NOT is_cancelled GROUP BY buyer_name, buyer_inn ORDER BY vol DESC LIMIT 3","answer":"Топ-3 покупателя аммиачной селитры в 2026 году по объёму:","row":"{{i}}. {{buyer_name}} (ИНН {{buyer_inn}}) — {{vol}} {{unit}} на {{total}} сум","note":"Без аннулированных сделок.","nodata":"Нет данных."}}
 Q[uz]: 280091-sonli bitimda xaridor kim va 1 tonna narxi qancha?  HINTS: number 280091: deal_id exists
@@ -85,8 +90,6 @@ Q[uz_cyr]: 2026 йилда нечта битим бекор қилинган в�
 {{"kind":"sql","sql":"SELECT count(*) FILTER (WHERE is_cancelled) AS n_cancel, count(*) AS n, round(100.0*count(*) FILTER (WHERE is_cancelled)/count(*),2) AS pct FROM deals WHERE year=2026","answer":"2026 йилда {{n}} та битимдан {{n_cancel}} таси бекор қилинган ({{pct}}%).","row":"","note":"Бекор қилинган = «Аннулирован(Не оплачен)».","nodata":"Маълумот топилмади."}}
 Q[ru]: Сколько сделок провела компания «Альфа Трейд Групп»?  HINTS: (none)
 {{"kind":"sql","sql":"SELECT (SELECT count(*) FROM participants WHERE name_key ILIKE '%alfa%treyd%') AS _found, count(*) AS n FROM deals d JOIN participants p ON p.inn IN (d.seller_inn, d.buyer_inn) WHERE p.name_key ILIKE '%alfa%treyd%'","answer":"Компания провела {{n}} сделок.","row":"","note":"","nodata":"Компании «Альфа Трейд Групп» в данных биржи нет."}}
-Q[ru]: Каков срок оплаты и залог по контракту 100002?  HINTS: number 100002: deal_id exists; contract_id exists
-{{"kind":"sql","sql":"SELECT product_name_raw, pay_term_days, delivery_term_days, deposit_pct, base_price, currency, unit FROM contracts WHERE contract_id=100002","answer":"Контракт 100002 ({{product_name_raw}}): срок оплаты {{pay_term_days}} дн. от даты сделки, срок поставки {{delivery_term_days}} дн. от оплаты, залог {{deposit_pct}}%, базисная цена {{base_price}} {{currency}} за {{unit}}.","row":"","note":"","nodata":"Контракт 100002 не найден."}}
 Q[uz]: Qaysi oyda 2025-yilda paxta savdosi eng ko‘p bo‘lgan?  HINTS: product='Хлопок-сырец'
 {{"kind":"sql","sql":"(SELECT 'summa' AS by_metric, month, sum(amount_uzs) AS total, sum(volume) AS vol, any_value(unit) AS unit FROM deals WHERE product='Хлопок-сырец' AND year=2025 AND NOT is_cancelled GROUP BY month ORDER BY total DESC LIMIT 1) UNION ALL (SELECT 'hajm', month, sum(amount_uzs), sum(volume), any_value(unit) FROM deals WHERE product='Хлопок-сырец' AND year=2025 AND NOT is_cancelled GROUP BY month ORDER BY 4 DESC LIMIT 1)","answer":"2025-yilda paxta xomashyosi savdosi eng ko‘p bo‘lgan oy:","row":"{{by_metric}} bo‘yicha: {{month}}-oy — {{total}} so‘m, {{vol}} {{unit}}","note":"Bekor qilingan bitimlarsiz.","nodata":"Ma’lumot yo‘q."}}
 Q[ru]: Что означает статус «Исполнен(Частично)»?
@@ -100,7 +103,9 @@ LANG_NAME = {"ru": "ru (Russian)", "uz": "uz latin (O‘zbek lotin)", "uz_cyr": 
 
 def user_message(question: str, lang: str, hints: list[str], today: str) -> str:
     h = "\n".join(f"- {x}" for x in hints) if hints else "(none)"
-    return f"TODAY: {today}\nLANGUAGE: {LANG_NAME[lang]}\nHINTS:\n{h}\nQ: {question}"
+    ex = examples.render(examples.similar(question))
+    return (f"SIMILAR VERIFIED SOLUTIONS (adapt filters/values to the new question; follow the RULES):\n{ex}\n\n"
+            f"TODAY: {today}\nLANGUAGE: {LANG_NAME[lang]}\nHINTS:\n{h}\nQ: {question}")
 
 
 ARBITER_SYSTEM = SYSTEM + """

@@ -158,7 +158,16 @@ def main() -> None:
         d."Брокер покупателя" AS buyer_broker, bb.name AS buyer_broker_name,
         {dt('Дата оплаты')} AS pay_date, {dt('Дата поставки')} AS delivery_date,
         CAST(NULLIF(d."Поставлено", '') AS INTEGER) AS delivered_lots,
-        CAST(NULLIF(d."Поставлено", '') AS INTEGER) * CAST(d."Лот" AS DOUBLE) AS delivered_volume
+        CAST(NULLIF(d."Поставлено", '') AS INTEGER) * CAST(d."Лот" AS DOUBLE) AS delivered_volume,
+        k.pay_term_days, k.delivery_term_days, k.deposit_pct, k.base_price, k.delivery_basis,
+        {dt('Дата сделки')} + k.pay_term_days AS pay_due_date,
+        {dt('Дата оплаты')} + k.delivery_term_days AS delivery_due_date,
+        {dt('Дата оплаты')} - {dt('Дата сделки')} AS pay_days,
+        {dt('Дата поставки')} - {dt('Дата оплаты')} AS delivery_days,
+        ({dt('Дата поставки')} - {dt('Дата оплаты')}) > k.delivery_term_days AS is_delivery_late,
+        ({dt('Дата оплаты')} - {dt('Дата сделки')}) > k.pay_term_days AS is_pay_late,
+        {amt} * k.deposit_pct / 100.0 AS deposit_amount,
+        ({amt} / ({vol}) / {num('Стартовая цена')} - 1) * 100 AS price_change_pct
       FROM rd d
       JOIN kc k ON k.contract_id = CAST(d."Номер контракта" AS INTEGER)
       JOIN pv ON pv.name = d."Наименование товара" AND pv.hs = k.hs_code

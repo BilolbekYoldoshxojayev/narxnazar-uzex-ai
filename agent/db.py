@@ -29,8 +29,42 @@ def check_sql(sql: str) -> str:
     return s
 
 
+def unround(sql: str) -> str:
+    """Remove round(x[, n]) wrappers: exact values are kept; the formatter rounds only for display."""
+    out, i, low = [], 0, sql.lower()
+    while True:
+        j = low.find("round(", i)
+        if j < 0:
+            out.append(sql[i:])
+            return "".join(out)
+        if j > 0 and (low[j - 1].isalnum() or low[j - 1] == "_"):
+            out.append(sql[i:j + 6])
+            i = j + 6
+            continue
+        out.append(sql[i:j])
+        k, depth, comma = j + 6, 1, None
+        while k < len(sql) and depth:
+            ch = sql[k]
+            if ch == "'":
+                k = sql.find("'", k + 1)
+                if k < 0:
+                    return sql
+            elif ch == "(":
+                depth += 1
+            elif ch == ")":
+                depth -= 1
+            elif ch == "," and depth == 1:
+                comma = k
+            k += 1
+        if depth:
+            return sql
+        inner = sql[j + 6:(comma if comma is not None else k - 1)]
+        out.append("(" + unround(inner) + ")")
+        i = k
+
+
 def query(sql: str, max_rows: int = 50, timeout: float = 10.0) -> tuple[list[str], list[tuple]]:
-    s = check_sql(sql)
+    s = unround(check_sql(sql))
     cur = _con.cursor()
     timer = threading.Timer(timeout, cur.interrupt)
     timer.start()

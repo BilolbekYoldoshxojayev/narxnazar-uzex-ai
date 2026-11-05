@@ -10,7 +10,7 @@ import time
 sys.stdout.reconfigure(encoding="utf-8")
 
 from agent import db  # noqa: E402
-from eval.cases import CASES  # noqa: E402
+import importlib  # noqa: E402
 
 NODATA = re.compile(r"нет|не относится|не связан|aloqasi yo|тегишли эмас|не найден|отсутств|не содерж|невозможно|yo[‘'’`ʻ]?q|topilmadi|mavjud emas|йўқ|топилмади|мавжуд эмас|ma[’']?lumot", re.I)
 _REG = {r: ru for r, ru in db.raw("SELECT region, region_ru FROM regions")}
@@ -64,7 +64,9 @@ async def main() -> None:
     ap.add_argument("--only")
     ap.add_argument("--start", type=int, default=1)
     ap.add_argument("--pause", type=float, default=0)
+    ap.add_argument("--set", default="cases", help="cases | holdout")
     a = ap.parse_args()
+    CASES = importlib.import_module(f"eval.{a.set}").CASES
     idx = [int(x) for x in a.only.split(",")] if a.only else list(range(a.start, len(CASES) + 1))
     passed, times, fails = 0, [], []
     for i in idx:

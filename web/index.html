@@ -40,6 +40,8 @@
   textarea:focus{border-color:var(--green)}
   .send{background:var(--green);color:var(--bg);border:0;padding:0 20px;font-weight:700;cursor:pointer}
   .send:disabled{opacity:.5;cursor:wait}
+  .how{border:1px solid var(--line);background:var(--panel);padding:10px 14px;margin-bottom:20px}
+  .how summary{cursor:pointer;font-weight:600;color:var(--green)} .how ol{margin:10px 0 2px;padding-left:20px;color:var(--mute)} .how li{margin:4px 0}
   footer{font:11px ui-monospace,monospace;color:var(--mute);text-align:center;padding:6px}
 </style>
 </head>
@@ -57,6 +59,7 @@
     <div class="stat"><b>14 392</b><span id="s3"></span></div>
     <div class="stat"><b>2022–2026</b><span id="s4"></span></div>
   </div>
+  <details class="how"><summary id="howt"></summary><ol id="how"></ol></details>
   <div class="chips" id="chips"></div>
   <div id="log"></div>
 </main>
@@ -66,14 +69,14 @@
 </form>
 <script>
 const T={uz:{t1:'Birja bitimlari bo‘yicha<br><span>AI-agent</span>',t2:'Savollarga faqat birja ma’lumotlari asosida aniq javob beradi. Har bir raqam SQL so‘rov natijasidan olinadi.',
- s1:'bitim',s2:'shartnoma',s3:'ishtirokchi',s4:'davr',ph:'Savolingizni yozing…',sql:'SQL so‘rov',think:'Hisoblanmoqda',ver:'2 model tasdiqladi',err:'Xatolik, qayta urinib ko‘ring.',
+ s1:'bitim',s2:'shartnoma',s3:'ishtirokchi',s4:'davr',ph:'Savolingizni yozing…',howt:'⚙️ Qanday ishlaydi?',how:['Savoldan tovar, viloyat, kompaniya, STIR va bitim raqami lug‘at va transliteratsiya yordamida aniqlanadi (LLM siz).','O‘xshash tekshirilgan savollar va ularning SQL yechimlari topiladi (RAG).','Ikki xil AI-model (Gemini va Groq) mustaqil ravishda SQL so‘rov yozadi.','So‘rovlar 500 000 bitimli DuckDB bazasida bajariladi va natijalar solishtiriladi.','Javobdagi raqamlar faqat SQL natijasidan qo‘yiladi — model raqam o‘ylab topa olmaydi. Ma’lumot bo‘lmasa, shuni aytadi.'],sql:'SQL so‘rov',think:'Hisoblanmoqda',ver:'2 model tasdiqladi',err:'Xatolik, qayta urinib ko‘ring.',
  ex:['2025-yilda karbamid bo‘yicha nechta bitim tuzilgan?','2024-yilda Namangan viloyatida sement savdosi summasi qancha?','280091-sonli bitimda xaridor kim va 1 tonna narxi qancha?','2026-yilda ammiakli selitraning top-3 xaridori','STIR 945809173 kompaniyasi nechta bitimda xaridor bo‘lgan?']},
  ru:{t1:'AI-агент по<br><span>биржевым сделкам</span>',t2:'Отвечает на вопросы строго по данным биржи. Каждое число берётся из результата SQL-запроса.',
- s1:'сделок',s2:'контрактов',s3:'участников',s4:'период',ph:'Введите вопрос…',sql:'SQL-запрос',think:'Считаю',ver:'подтверждено 2 моделями',err:'Ошибка, попробуйте ещё раз.',
+ s1:'сделок',s2:'контрактов',s3:'участников',s4:'период',ph:'Введите вопрос…',howt:'⚙️ Как это работает?',how:['Из вопроса извлекаются товар, регион, компания, ИНН и номер сделки — словари и транслитерация, без LLM.','Находятся похожие проверенные вопросы с готовыми SQL-решениями (RAG).','Две разные AI-модели (Gemini и Groq) независимо пишут SQL-запрос.','Запросы выполняются в базе DuckDB из 500 000 сделок, результаты сверяются.','Числа в ответе берутся только из результата SQL — модель не может выдумать цифры. Если данных нет, агент так и говорит.'],sql:'SQL-запрос',think:'Считаю',ver:'подтверждено 2 моделями',err:'Ошибка, попробуйте ещё раз.',
  ex:['Сколько сделок по карбамиду было в 2025 году?','Средняя цена бензина АИ-92 за тонну в 2025 году','Кто покупатель по сделке 280091 и какая цена за тонну?','Топ-3 покупателя аммиачной селитры в 2026 году','Какой процент сделок аннулирован в 2024 году?']}};
 let L='uz';const $=id=>document.getElementById(id),log=$('log');
 function setLang(l){L=l;document.querySelectorAll('.langs button').forEach(b=>b.classList.toggle('on',b.dataset.l==l));
- for(const k of['t1','t2','s1','s2','s3','s4'])$(k).innerHTML=T[l][k];$('q').placeholder=T[l].ph;
+ for(const k of['t1','t2','s1','s2','s3','s4','howt'])$(k).innerHTML=T[l][k];$('how').innerHTML=T[l].how.map(x=>'<li>'+x+'</li>').join('');$('q').placeholder=T[l].ph;
  $('chips').innerHTML='';T[l].ex.forEach(e=>{const c=document.createElement('button');c.type='button';c.className='chip';c.textContent=e;c.onclick=()=>ask(e);$('chips').append(c)})}
 document.querySelectorAll('.langs button').forEach(b=>b.onclick=()=>setLang(b.dataset.l));setLang('uz');
 function add(cls,text){const d=document.createElement('div');d.className='msg '+cls;d.textContent=text;log.append(d);d.scrollIntoView({behavior:'smooth',block:'end'});return d}

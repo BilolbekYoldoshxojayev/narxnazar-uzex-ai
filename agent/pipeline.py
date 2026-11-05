@@ -4,6 +4,7 @@ import datetime as dt
 import json
 import logging
 import math
+import re
 import time
 from collections import OrderedDict
 
@@ -128,6 +129,20 @@ async def _arbitrate(user: str, a: dict, b: dict, deadline: float):
 
 
 # ---------------- rendering ----------------
+_NUM_RE = re.compile(r"\d{2}\.\d{2}\.\d{4}|\d+(?:[.,]\d+)?")
+_ALWAYS_OK = {"0", "1", "2", "3", "4", "5", "10", "20", "50", "100", "2022", "2023", "2024", "2025", "2026",
+              "03.01.2022", "30.10.2026", "01.01.2022", "500", "000", "92", "95", "80"}
+
+
+def _invented_numbers(p: dict, question: str) -> list[str]:
+    """Numbers written by the model itself (template prose / free text) that do not come from the question.
+    Data numbers must arrive only through {placeholders} filled from the SQL result."""
+    texts = [p.get("answer") or "", p.get("row") or "", p.get("note") or "", p.get("nodata") or ""]
+    prose = " ".join(re.sub(r"\{[^}]*\}", " ", t) for t in texts)
+    allowed = set(_NUM_RE.findall(question)) | set(re.findall(r"\d+", question)) | _ALWAYS_OK
+    return [n for n in _NUM_RE.findall(prose) if n not in allowed and n.replace(",", ".") not in allowed]
+
+
 def _render(p: dict, lang: str) -> str:
     kind = p.get("kind")
     if kind in ("text", "no_data"):
@@ -135,21 +150,26 @@ def _render(p: dict, lang: str) -> str:
     if _empty(p):
         return (p.get("nodata") or MSG["nodata"][lang]).strip()
     cols, rows = p["cols"], p["rows"]
+    if p.get("_generic"):
+        return "\n".join(", ".join(f"{c}: {fmt(v, c, lang)}" for c, v in zip(cols, r)) for r in rows[:50])
     first = dict(zip(cols, rows[0]))
     tmpl_row = (p.get("row") or "").strip()
     parts = []
     if tmpl_row:
         parts.append(fill(p.get("answer", ""), first, lang))
-        for i, r in enumerate(rows[:20], 1):
+        for i, r in enumerate(rows[:50], 1):
             parts.append(fill(tmpl_row, dict(zip(cols, r)), lang, i))
     else:
         parts.append(fill(p.get("answer", ""), first, lang))
         if len(rows) > 1:  # template expected one row but got many: list the rest generically
-            for i, r in enumerate(rows[1:20], 2):
+            for i, r in enumerate(rows[1:50], 2):
                 parts.append(f"{i}. " + ", ".join(fmt(v, c, lang) for c, v in zip(cols, r)))
+    if len(rows) > 50:
+        parts.append({"ru": "… и другие (показаны первые 50)", "uz": "… va boshqalar (dastlabki 50 tasi)",
+                      "uz_cyr": "… ва бошқалар (дастлабки 50 таси)"}[lang])
     text = "\n".join(x for x in parts if x)
     if leftover(text):  # unknown placeholders: fall back to a plain table so no number is lost
-        text = "\n".join(", ".join(f"{c}: {fmt(v, c, lang)}" for c, v in zip(cols, r)) for r in rows[:20])
+        text = "\n".join(", ".join(f"{c}: {fmt(v, c, lang)}" for c, v in zip(cols, r)) for r in rows[:50])
     note = fill(p.get("note") or "", first, lang).strip()
     if note and not leftover(note):
         text += "\nℹ️ " + note
@@ -180,7 +200,9 @@ async def answer(question: str) -> dict:
         done, pending = await asyncio.wait({ta, tb}, return_when=asyncio.FIRST_COMPLETED)
         first = next(iter(done)).result()
         if pending and first and "err" not in first:  # good first draft: give the second a short grace period
-            _, pending = await asyncio.wait(pending, timeout=config.SECOND_GRACE)
+            weak = any(w in (first.get("_model") or "") for w in ("lite", "gemma", "qwen", "20b"))
+            left = draft_deadline - time.time()
+            _, pending = await asyncio.wait(pending, timeout=max(0, left) if weak else config.SECOND_GRACE)
         elif pending:
             _, pending = await asyncio.wait(pending)
         for t in pending:
@@ -191,6 +213,10 @@ async def answer(question: str) -> dict:
         a, b = await _draft(user, providers[0], draft_deadline), None
 
     chosen, agreed = None, False
+    for p in (a, b):  # a draft whose text contains numbers not taken from the question/result is rejected
+        if p and "err" not in p and _invented_numbers(p, q):
+            log.warning("draft %s rejected: invented numbers %s", p.get("_model"), _invented_numbers(p, q))
+            p["err"] = "invented numbers"
     ok = [p for p in (a, b) if p and "err" not in p]
     if len(ok) == 2:
         if _agree(a, b):  # prefer the richer draft (more columns = breakdown of both interpretations)
@@ -199,6 +225,10 @@ async def answer(question: str) -> dict:
             chosen = await _arbitrate(user, a, b, deadline) or a
     elif ok:
         chosen = ok[0]
+    if chosen is None:  # only prose was bad: show the (trusted) SQL result as a plain table, no model text
+        bad = [p for p in (a, b) if p and p.get("err") == "invented numbers" and p.get("rows")]
+        if bad:
+            chosen = {**bad[0], "answer": "", "row": "", "note": "", "_generic": True}
     if chosen is None:
         res = {"answer": MSG["fail"][lang], "lang": lang, "ok": False, "ms": int((time.time() - t0) * 1000)}
         return res
