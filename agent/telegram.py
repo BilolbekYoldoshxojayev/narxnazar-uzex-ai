@@ -80,6 +80,16 @@ HOW = """⚙️ <b>Qanday ishlaydi / Как работает</b>
 Javob ostidagi «🔎» tugmasi hisob-kitob SQL so‘rovini ko‘rsatadi.
 Кнопка «🔎» под ответом показывает SQL-запрос расчёта."""
 
+EXAMPLES = [
+    "Сколько сделок по карбамиду было в 2025 году?",
+    "2024-yilda Namangan viloyatida sement savdosi summasi qancha?",
+    "Кто покупатель по сделке 280091 и какая цена за тонну?",
+    "2026-yilda ammiakli selitraning top-3 xaridori kim?",
+    "Сколько сделок поставлено с нарушением срока в 2025 году?",
+    "2025 йилда нечта битим бекор қилинган?",
+]
+EX_KB = {"inline_keyboard": [[{"text": "▶ " + q[:60], "callback_data": f"ex:{i}"}] for i, q in enumerate(EXAMPLES)]}
+
 BTN = {"ru": "🔎 Как посчитано", "uz": "🔎 Qanday hisoblandi", "uz_cyr": "🔎 Қандай ҳисобланди"}
 _sql_store: dict = {}  # short id -> (sql, verified, model)
 
@@ -87,6 +97,12 @@ _sql_store: dict = {}  # short id -> (sql, verified, model)
 async def handle_callback(cb: dict) -> None:
     await tg("answerCallbackQuery", callback_query_id=cb["id"])
     data = cb.get("data", "")
+    if data.startswith("ex:") and data[3:].isdigit() and int(data[3:]) < len(EXAMPLES):
+        m, q = cb["message"], EXAMPLES[int(data[3:])]
+        echo = await tg("sendMessage", chat_id=m["chat"]["id"], text="❓ " + q)
+        mid = echo["message_id"] if echo else m["message_id"]
+        await handle_update({"message": {"message_id": mid, "chat": m["chat"], "text": q}})
+        return
     item = _sql_store.get(data[4:]) if data.startswith("sql:") else None
     chat = cb["message"]["chat"]["id"]
     if not item:
@@ -107,7 +123,7 @@ async def handle_update(upd: dict) -> None:
         return
     chat, text = msg["chat"]["id"], msg["text"].strip()
     if text.startswith("/start") or text.startswith("/help"):
-        await tg("sendMessage", chat_id=chat, text=START, parse_mode="HTML")
+        await tg("sendMessage", chat_id=chat, text=START, parse_mode="HTML", reply_markup=EX_KB)
         return
     if text.startswith("/how"):
         await tg("sendMessage", chat_id=chat, text=HOW, parse_mode="HTML")

@@ -4,6 +4,11 @@ import math
 import re
 
 CUR = {"UZS": {"ru": "сум", "uz": "so‘m", "uz_cyr": "сўм"}, "USD": {"ru": "USD", "uz": "USD", "uz_cyr": "USD"}}
+MONTHS = {
+    "ru": ["январь", "февраль", "март", "апрель", "май", "июнь", "июль", "август", "сентябрь", "октябрь", "ноябрь", "декабрь"],
+    "uz": ["yanvar", "fevral", "mart", "aprel", "may", "iyun", "iyul", "avgust", "sentyabr", "oktyabr", "noyabr", "dekabr"],
+    "uz_cyr": ["январ", "феврал", "март", "апрел", "май", "июн", "июл", "август", "сентябр", "октябр", "ноябр", "декабр"],
+}
 BOOL = {"ru": ("Да", "Нет"), "uz": ("Ha", "Yo‘q"), "uz_cyr": ("Ҳа", "Йўқ")}
 
 
@@ -33,6 +38,10 @@ def fmt(v, col: str, lang: str) -> str:
         return v.strftime("%d.%m.%Y")
     if isinstance(v, dt.time):
         return v.strftime("%H:%M:%S")
+    if isinstance(v, int) and re.fullmatch(r"(?i)(\w*_)?month|oy|mes\w*", col) and 1 <= v <= 12:
+        return f"{v} ({MONTHS[lang][v - 1]})"
+    if isinstance(v, int) and re.search(r"(?i)(^|_)(id|year|yil|god|inn|stir|code|kod|num|nomer|raqam)$|^(deal|contract)", col):
+        return str(v)  # identifiers and years: no thousands separator
     if isinstance(v, (int, float)):
         if isinstance(v, float) and re.search(r"pct|percent|share|foiz|dolya", col, re.I):
             return f"{v:.2f}".rstrip("0").rstrip(".")
