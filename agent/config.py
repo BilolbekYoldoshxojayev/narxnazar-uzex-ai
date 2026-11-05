@@ -31,8 +31,8 @@ def _list(*names: str) -> list[str]:
 # provider -> (keys, models). Order of PROVIDERS = failover order after the preferred one.
 PROVIDERS = {
     "gemini": (_list("GEMINI_API_KEYS", "GEMINI_API_KEY"),
-               _list("GEMINI_MODELS") or ["gemini-3.5-flash", "gemini-3-flash-preview", "gemini-3.8-flash",
-                                          "gemini-3.7-flash", "gemini-flash-latest", "gemini-3.5-flash-lite", "gemma-4-31b-it"]),
+               _list("GEMINI_MODELS") or ["gemini-3.8-flash", "gemini-3.7-flash", "gemini-3.5-flash",
+                                          "gemini-3-flash-preview", "gemini-flash-latest", "gemini-3.5-flash-lite", "gemma-4-31b-it"]),
     "groq": (_list("GROQ_API_KEYS", "GROQ_API_KEY"),
              _list("GROQ_MODELS") or ["openai/gpt-oss-120b", "qwen/qwen3.8-27b"]),
     "cerebras": (_list("CEREBRAS_API_KEYS", "CEREBRAS_API_KEY"), _list("CEREBRAS_MODELS") or ["gpt-oss-120b"]),
