@@ -14,6 +14,7 @@ aniq va **faqat ma’lumotlar asosida** javob beradigan AI-agent. Telegram-bot +
 Savol (RU/UZ) ─► 1. Til aniqlash (lotin / kirill / rus) ─────────── deterministik, 0 token
               ─► 2. Entity resolver: tovar (41 kanonik), viloyat, kompaniya (fuzzy, translit),
                     STIR/ИНН, bitim/shartnoma raqami, broker kodi, nav/sinf/marka ── deterministik
+              ─► 2a. RAG: tekshirilgan «savol → SQL» yechimlardan eng o‘xshash 4 tasi namunaga olinadi
               ─► 3. Ikki mustaqil LLM (Gemini ‖ Groq) parallel ravishda SQL + javob shabloni yozadi
               ─► 4. DuckDB (read-only, faqat SELECT, 10 s limit) ikkala SQL ni bajaradi
               ─► 5. Natijalar mos kelsa ✓ — javob; farq qilsa — hakam-model (arbiter) to‘g‘risini tanlaydi
@@ -43,7 +44,9 @@ Savol (RU/UZ) ─► 1. Til aniqlash (lotin / kirill / rus) ──────�
    hajm bo‘yicha tortilgan va oddiy o‘rtacha; «hajm» — so‘mda va natural birlikda.
 7. **Gallyutsinatsiyaga qarshi.** Ma’lumot yo‘q bo‘lsa (mavjud bo‘lmagan kompaniya, 2021-yil, prognoz, mavzudan tashqari savol)
    agent «ma’lumot topilmadi» deydi. Raqamlar faqat SQL natijasidan; SQL — faqat o‘qish rejimida.
-8. **Baholash to‘plami** (`eval/`): RU/UZ savollar va qo‘lda yozilgan etalon SQL; bir qismi DuckDB dan mustaqil, xom CSV
+8. **Raqam qo‘riqchisi.** Model matnida savolda ham, SQL natijasida ham bo‘lmagan raqam bo‘lsa, javob rad etiladi. `round()` SQL dan olib tashlanadi, aniq qiymat formatlashda yaxlitlanadi.
+9. **Shaffoflik.** Telegram «🔎 Qanday hisoblandi» tugmasi SQL va 2 model tekshiruvini ko‘rsatadi, `/how` esa tizim ishini tushuntiradi.
+10. **Baholash to‘plami** (`eval/`): RU/UZ savollar va qo‘lda yozilgan etalon SQL; bir qismi DuckDB dan mustaqil, xom CSV
    ustida sof Python bilan qayta hisoblab tekshirilgan.
 
 ## Ishga tushirish / Запуск

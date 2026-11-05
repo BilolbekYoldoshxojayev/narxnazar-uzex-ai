@@ -21,9 +21,10 @@ bir nechta kalit avtomatik almashadi; Render (Docker) hosting.
    summa (eksport bitimlari bitim kunidagi kurs bo‘yicha) va «bekor qilingan» belgisi oldindan hisoblangan.
 2. Savoldagi tovar, viloyat, kompaniya (kirill/lotin transliteratsiya + fuzzy), STIR, bitim/shartnoma raqami va broker
    LLM siz, deterministik usulda aniqlanadi.
+2a. **RAG:** tekshirilgan savol→SQL yechimlar kutubxonasidan eng o‘xshashlari (char n-gram TF-IDF) topilib, modelga namuna sifatida beriladi.
 3. Ikki mustaqil model parallel ravishda SQL so‘rov va javob shablonini yozadi. DuckDB ikkalasini faqat o‘qish rejimida
    bajaradi. Natijalar mos kelsa javob tasdiqlanadi, farq qilsa uchinchi chaqiruv (arbiter) to‘g‘ri variantni tanlaydi.
-4. Raqamlar shablonga dastur tomonidan qo‘yiladi: model raqam yozmaydi, shuning uchun gallyutsinatsiya bo‘lmaydi.
+4. Raqamlar shablonga dastur tomonidan qo‘yiladi: model raqam yozmaydi. Model matnida savolda ham, SQL natijasida ham bo‘lmagan raqam paydo bo‘lsa, bu javob avtomatik rad etiladi. Shuning uchun gallyutsinatsiya bo‘lmaydi.
    Ma’lumot bo‘lmasa, agent «ma’lumot topilmadi» deb javob beradi.
 5. Noaniq savollarda javob ikkala talqinni beradi: jami / bekor qilingan / amalga oshgan bitimlar, tortilgan va oddiy
    o‘rtacha narx.
@@ -50,9 +51,10 @@ hisoblab tekshirilgan.
    курсу на дату сделки) и признак аннулирования.
 2. Товар, регион, компания (транслитерация + нечёткий поиск), ИНН, номер сделки или контракта и брокер определяются
    детерминированно, без LLM.
+2a. **RAG:** из библиотеки проверенных решений «вопрос→SQL» подбираются самые похожие (char n-gram TF-IDF) и передаются модели как образцы.
 3. Две независимые модели параллельно пишут SQL и шаблон ответа. DuckDB выполняет оба запроса в режиме только чтения.
    Совпадение результатов подтверждает ответ, при расхождении арбитр выбирает верный вариант.
-4. Числа подставляет программа, модель цифры не пишет. Если данных нет, агент прямо говорит об этом.
+4. Числа подставляет программа, модель цифры не пишет. Если в тексте модели есть число, которого нет ни в вопросе, ни в результате SQL, такой ответ автоматически отклоняется. Если данных нет, агент прямо говорит об этом.
 5. При неоднозначном вопросе ответ покрывает обе трактовки: все / аннулированные / состоявшиеся сделки,
    средневзвешенная и простая средняя цена.
 
