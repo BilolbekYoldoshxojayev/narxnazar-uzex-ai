@@ -43,6 +43,8 @@ _dead_models: dict[str, float] = {}
 
 def _retry_after(r: httpx.Response, default: float = 60) -> float:
     try:
+        if "PerDay" in r.text:  # daily free-tier quota used up: skip this key+model for the rest of the session
+            return 6 * 3600
         if "retry-after" in r.headers:
             return float(r.headers["retry-after"]) + 1
         m = re.search(r'"retryDelay":\s*"(\d+)', r.text)

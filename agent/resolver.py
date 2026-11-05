@@ -48,7 +48,12 @@ def _terms(*texts: str, stem=None) -> list[list[str]]:
 _ENDINGS = {"", "a", "u", "e", "i", "y", "ы", "om", "ov", "oy", "ni", "ning", "da", "dan", "ga", "lar", "larni", "ga"}
 
 
+_STOP_PREFIX = ("qanday", "qandaq")  # question words "qanday/қандай" (how/which) are not "qand" (sugar)
+
+
 def _word_hit(w: str, q: str) -> bool:
+    if q.startswith(_STOP_PREFIX):
+        return False
     return q.startswith(w) and (len(w) >= 4 or q[len(w):] in _ENDINGS)
 
 

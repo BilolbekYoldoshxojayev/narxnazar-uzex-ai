@@ -50,6 +50,7 @@ RULES
 2. Companies/brokers: use inn/broker_code from HINTS. If a named company is not in HINTS, search
  `name_key ILIKE '%<latin lowercase words>%'` in participants/brokers and return column `_found`=count of matches.
 3. Money: sum across currencies with amount_uzs (UZS). If only USD (export) deals are involved, also give amount (USD).
+ A mixed total is stated in UZS only; a USD figure may appear only labelled as the export part ("из них экспорт: X USD").
  Prices: per unit in contract currency; always return `currency` and `unit` columns with prices/volumes. Never add volumes of different units.
 4. Cover ambiguity in ONE answer:
  - ANY count (deals, distinct buyers/sellers/brokers/products): total over all deals + over valid (non-cancelled) deals;

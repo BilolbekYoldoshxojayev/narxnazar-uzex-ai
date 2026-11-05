@@ -58,7 +58,14 @@ def _run(plan: dict) -> dict:
         out["cols"], out["rows"] = cols, rows
     except db.SQLError as e:
         out["err"] = str(e)
+        return out
+    if _SUM_RE.search(plan["sql"]) and not re.search(r"(?i)is_cancelled|status", plan["sql"]):
+        out["err"] = LINT + "sums of money/volume must exclude cancelled deals (FILTER (WHERE NOT is_cancelled))"
     return out
+
+
+LINT = "lint: "
+_SUM_RE = re.compile(r"(?i)\b(sum|avg)\s*\(\s*(amount\w*|volume|delivered_volume)\b")
 
 
 def _sig(p: dict):
@@ -128,6 +135,8 @@ async def _draft(user: str, prefer: str, deadline: float, offset: int = 0):
                 return p2
         except llm.LLMError:
             pass
+    if p.get("err", "").startswith(LINT):  # repair failed: keep the executed result rather than lose the answer
+        p.pop("err")
     return p
 
 
