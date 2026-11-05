@@ -16,3 +16,6 @@ data/*.tmp
 legacy/node_modules/
 legacy/.next/
 .DS_Store
+
+# handoff archives
+*.zip
