@@ -59,6 +59,13 @@ _PH = re.compile(r"\{([A-Za-z_][A-Za-z0-9_]*)\}")
 def fill(template: str, row: dict, lang: str, i: int | None = None) -> str:
     low = {k.lower(): (k, v) for k, v in row.items()}
 
+    def month_suffix(m):  # "{month}-oyda" -> "10-oyda (oktyabr)" instead of "10 (oktyabr)-oyda"
+        k_v = low.get(m.group(1).lower())
+        if k_v and isinstance(k_v[1], int) and 1 <= k_v[1] <= 12 and re.fullmatch(r"(?i)(\w*_)?month|oy|mes\w*", k_v[0]):
+            return f"{k_v[1]}-{m.group(2)} ({MONTHS[lang][k_v[1] - 1]})"
+        return m.group(0)
+    template = re.sub(r"\{([A-Za-z_]\w*)\}[-‑](\w+)", month_suffix, template or "")
+
     def rep(m):
         name = m.group(1)
         if name == "i" and i is not None:

@@ -25,10 +25,11 @@ python -m uvicorn agent.app:app --port 8000   # web chat: http://localhost:8000
 ```bash
 python -m eval.run                    # 90 regression questions (reference SQL in eval/cases.py)
 python -m eval.run --set holdout      # 22 unseen questions (eval/holdout.py)
+python -m eval.run --set adversarial  # 30 tricky styles: comparisons, growth, typos, scripts
 python -m eval.run --only 5,17        # a few cases
 python -m eval.run --url https://narxnazar-uzex-ai.onrender.com   # against the live server
 ```
-Last results: regression 97.8%, holdout 95.5%; every failure found was fixed. Add a case to `eval/cases.py` for every new
+Last results: regression 97.8%, holdout 95.5%, adversarial 100%; every failure found was fixed. Add a case to `eval/cases.py` for every new
 question type; never tune on `eval/holdout.py`.
 
 ## 4. Deployment

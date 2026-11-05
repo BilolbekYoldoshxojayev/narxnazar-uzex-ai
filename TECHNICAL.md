@@ -5,9 +5,7 @@
 **Havolalar / Ссылки:** Telegram-bot: https://t.me/NarxNazarAI · Veb: https://narxnazar-uzex-ai.onrender.com ·
 Kod: https://github.com/BilolbekYoldoshxojayev/narxnazar-uzex-ai
 
-**Sinov / Тест:** 76 savollik RU/UZ to‘plam (sanash, summa, narx, reyting, bitim/shartnoma/STIR qidiruvi, eksport va kurs,
-mavjud bo‘lmagan ma’lumotga tuzoq savollar). Birinchi o‘tishda ~96% aniqlik, topilgan barcha xatolar tuzatildi; javob vaqti
-odatda 5–15 s.
+**Sinov / Тест:** 3 ta to‘plam, jami 142 savol (RU / UZ lotin / UZ kirill). Ular sanash, summa, narx, reyting, bitim/shartnoma/STIR qidiruvi, muddat buzilishi, solishtirish, o‘sish %, oylar kesimi, imlo xatolari va tuzoq savollarni qamraydi. Natijalar: regressiya 97.8%, yangi holdout 95.5%, adversarial 30/30; topilgan barcha xatolar tuzatildi. Jonli serverda 10 ta parallel savol: 10/10. Odatdagi javob vaqti 2–10 s.
 
 **NarxNazar** — birja bitimlari bo‘yicha savollarga o‘zbek (lotin va kirill) hamda rus tillarida faqat berilgan ma’lumotlar
 asosida javob beradigan AI-agent (Telegram-bot va veb-chat).
