@@ -59,14 +59,34 @@ def _run(plan: dict) -> dict:
     except db.SQLError as e:
         out["err"] = str(e)
         return out
-    if _SUM_RE.search(plan["sql"]) and not re.search(r"(?i)is_cancelled|status", plan["sql"]):
+    if _unfiltered_sum(plan["sql"]):
         out["err"] = LINT + "sums of money/volume must exclude cancelled deals (FILTER (WHERE NOT is_cancelled))"
     sql = plan["sql"]
-    if (re.search(r"(?i)\bsum\s*\(\s*(delivered_)?volume\b", sql)
+    if (re.search(r"(?i)\bsum\s*\(\s*(delivered_)?volume\s*\)", sql)
             and not re.search(r"(?i)group\s+by[\s\S]*\bunit\b|\bunit\s*(=|in\b)", sql)
             and (not re.search(r"(?i)\bproduct\s*(=|in\b)", sql) or any(m in sql for m in _MULTI_UNIT))):
         out["err"] = LINT + "volumes of different units (тонна/литр/...) must not be added: GROUP BY unit or filter unit"
     return out
+
+
+_GLOBAL_FILTER = re.compile(r"(?i)\b(where|and)\s+(\(\s*)?((not\s+)?is_cancelled|status\s*(=|in\b|<>|!=))")
+_FILTER_CLAUSE = re.compile(r"(?i)filter\s*\(\s*where[^)]*\)")
+
+
+def _unfiltered_sum(sql: str) -> bool:
+    """A money/volume sum that is neither under a query-level is_cancelled/status filter nor has its own FILTER."""
+    if _GLOBAL_FILTER.search(_FILTER_CLAUSE.sub(" ", sql)):
+        return False
+    filtered = unfiltered = 0
+    for m in _SUM_RE.finditer(sql):
+        tail = sql[m.end():m.end() + 160]
+        close = tail.find(")")
+        after = tail[close + 1:close + 80] if close >= 0 else ""
+        if re.match(r"(?i)\s*filter\s*\(\s*where[^)]*(is_cancelled|status)", after):
+            filtered += 1
+        else:
+            unfiltered += 1
+    return unfiltered > 0 and filtered == 0  # an extra "incl. cancelled" variant next to a filtered one is fine
 
 
 _MULTI_UNIT = [r[0] for r in db.raw("SELECT product FROM deals GROUP BY 1 HAVING count(DISTINCT unit) > 1")]
@@ -145,6 +165,7 @@ async def _draft(user: str, prefer: str, deadline: float, offset: int = 0):
             pass
     if p.get("err", "").startswith(LINT):  # repair failed: keep the executed result rather than lose the answer
         p.pop("err")
+        p["_lint"] = True
     return p
 
 
@@ -257,6 +278,8 @@ async def answer(question: str) -> dict:
             log.warning("draft %s rejected: invented numbers %s", p.get("_model"), _invented_numbers(p, q))
             p["err"] = "invented numbers"
     ok = [p for p in (a, b) if p and "err" not in p]
+    if len(ok) == 2 and ok[0].get("_lint") != ok[1].get("_lint"):  # a rule-breaking draft loses to a clean one
+        ok = [p for p in ok if not p.get("_lint")]
     if len(ok) == 2:
         if _agree(a, b):  # prefer the richer draft (more columns = breakdown of both interpretations)
             chosen, agreed = (a if len(a.get("cols", [])) >= len(b.get("cols", [])) else b), True
