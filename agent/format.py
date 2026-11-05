@@ -77,5 +77,38 @@ def fill(template: str, row: dict, lang: str, i: int | None = None) -> str:
     return _PH.sub(rep, template or "")
 
 
+# Russian noun agreement after numbers: "5 253 сделки", "21 сделка", "за 1 тонну", "4 584 тонны", "10 сделок"
+_RU_FORMS = [("сделка", "сделки", "сделок", "сделку"), ("тонна", "тонны", "тонн", "тонну"),
+             ("контракт", "контракта", "контрактов", "контракт"), ("компания", "компании", "компаний", "компанию"),
+             ("покупатель", "покупателя", "покупателей", "покупателя"), ("продавец", "продавца", "продавцов", "продавца"),
+             ("участник", "участника", "участников", "участника"), ("брокер", "брокера", "брокеров", "брокера"),
+             ("штука", "штуки", "штук", "штуку"), ("литр", "литра", "литров", "литр"), ("раз", "раза", "раз", "раз")]
+_RU_LOOKUP = {w: f for f in _RU_FORMS for w in f[:3]}
+_RU_RE = re.compile(r"(?<![\w.,])((?:за|на|в|по|из|от|до|для|более|менее|около|свыше|меньше|больше|среди|у)\s+)?"
+                    r"(\d{1,3}(?: \d{3})*|\d+)([.,]\d+)?(\s+)(" + "|".join(sorted(_RU_LOOKUP, key=len, reverse=True)) + r")(?!\w)",
+                    re.IGNORECASE)
+_GENITIVE = {"из", "от", "до", "для", "более", "менее", "около", "свыше", "меньше", "больше", "среди", "у"}
+
+
+def ru_agree(text: str) -> str:
+    def rep(m):
+        prep, num, frac, sp, word = m.groups()
+        p = (prep or "").strip().lower()
+        if p in _GENITIVE or p == "по" or word[0].isupper():  # genitive/dative contexts: keep the model's form
+            return m.group(0)
+        f = _RU_LOOKUP[word.lower()]
+        n = int(num.replace(" ", ""))
+        if frac:
+            w = f[1]
+        elif n % 10 == 1 and n % 100 != 11:
+            w = f[3] if p in ("за", "на", "в") else f[0]
+        elif 2 <= n % 10 <= 4 and not 12 <= n % 100 <= 14:
+            w = f[1]
+        else:
+            w = f[2]
+        return f"{prep or ''}{num}{frac or ''}{sp}{w}"
+    return _RU_RE.sub(rep, text)
+
+
 def leftover(text: str) -> list[str]:
     return _PH.findall(text)

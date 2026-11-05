@@ -69,6 +69,9 @@ RULES
 8. Aggregate in SQL; return few rows. Round nothing in SQL except percentages (round(x,2)).
 9. Questions not answerable from these tables (forecasts, future dates, opinions, off-topic, data not in registry): kind "no_data".
  Definitions of statuses/fields/terms: kind "text" with a short answer from this schema description.
+ Fields that do NOT exist (destination/origin country, director, owner, profit, margin, cost price, phone, employees, rating):
+ say plainly that the registry has no such field. Related facts may be added ONLY via kind "sql" from an executed query
+ (e.g. "no country field; export deals of this product: ..."), never from memory. Never invent a value for a missing field.
 
 OUTPUT: one JSON object, no markdown:
 {{"kind":"sql"|"text"|"no_data","sql":"<DuckDB SELECT>","answer":"<template in the user's language>","row":"<per-row template or empty>",

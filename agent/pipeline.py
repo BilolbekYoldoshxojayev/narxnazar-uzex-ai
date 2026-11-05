@@ -9,7 +9,7 @@ import time
 from collections import OrderedDict
 
 from . import config, db, llm, prompt
-from .format import fill, fmt, leftover
+from .format import fill, fmt, leftover, ru_agree
 from .resolver import detect_lang, resolve
 from .textnorm import text_key
 
@@ -24,6 +24,23 @@ MSG = {
                "uz": "Birja ma’lumotlarida bu savolga javob beradigan ma’lumot yo‘q.",
                "uz_cyr": "Биржа маълумотларида бу саволга жавоб берадиган маълумот йўқ."},
 }
+
+
+MSG["years"] = {"ru": "Данных за {y} нет: реестр биржи охватывает только период 03.01.2022 – 30.10.2026.",
+                "uz": "{y} uchun ma’lumot yo‘q: birja reyestri faqat 03.01.2022 – 30.10.2026 davrini qamraydi.",
+                "uz_cyr": "{y} учун маълумот йўқ: биржа реестри фақат 03.01.2022 – 30.10.2026 даврини қамрайди."}
+_YEAR_RE = re.compile(r"(?<![\d.,№#])(?<!№ )((?:19|20)\d\d)(?![\d.,]\d)"
+                      r"(?!\s*(?:сум|сўм|so|usd|\$|тонн|ton|кг|kg|литр|litr|шт|dona|ta\b|%|лот|lot))", re.IGNORECASE)
+_RANGE_RE = re.compile(r"(?i)(?:^|\W)(?:с|со|по|до|после|между|начиная|since|from|until|before|after|between)\s|"
+                       r"(?:dan|gacha|buyon|beri|keyin|oldin|дан|гача|буён|бери|кейин|олдин)\b|\d\s*[-–—]\s*\d")
+
+
+def _out_of_range_years(q: str) -> list[str]:
+    """Years mentioned in the question when ALL of them are outside the data (2022-2026) and no range is asked."""
+    ys = _YEAR_RE.findall(q)
+    if not ys or any(2022 <= int(y) <= 2026 for y in ys) or _RANGE_RE.search(q):
+        return []
+    return sorted(set(ys))
 
 
 def _today() -> str:
@@ -173,7 +190,7 @@ def _render(p: dict, lang: str) -> str:
     note = fill(p.get("note") or "", first, lang).strip()
     if note and not leftover(note):
         text += "\nℹ️ " + note
-    return text
+    return ru_agree(text) if lang == "ru" else text
 
 
 # ---------------- main entry ----------------
@@ -184,6 +201,11 @@ async def answer(question: str) -> dict:
     key = text_key(q) + "|" + _today()
     if key in _cache:
         return {**_cache[key], "cached": True, "ms": int((time.time() - t0) * 1000)}
+
+    bad_years = _out_of_range_years(q)
+    if bad_years:  # deterministic: no LLM, so no trick question can produce a made-up "0 deals in 2021"
+        return {"answer": MSG["years"][lang].format(y=", ".join(bad_years)), "lang": lang, "ok": True, "sql": "",
+                "model": "rule", "ms": int((time.time() - t0) * 1000)}
 
     hints = await asyncio.to_thread(resolve, q)
     user = prompt.user_message(q, lang, hints, _today())

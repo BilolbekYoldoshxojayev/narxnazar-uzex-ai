@@ -101,6 +101,16 @@ LIB = [
     dict(q="\"Gehu Kimyo\" MChJ qaysi tovarlarni sotgan?",
          sql="SELECT product, count(*) AS n, sum(amount_uzs) FILTER (WHERE NOT is_cancelled) AS total FROM deals WHERE seller_inn=(SELECT inn FROM participants WHERE name='\"Gehu Kimyo\" MChJ') GROUP BY 1 ORDER BY n DESC",
          a="\"Gehu Kimyo\" MChJ sotgan tovarlar:", r="{i}. {product} — {n} ta bitim, {total} so‘m"),
+    # ---- change over time / fields that do not exist ----
+    dict(q="На сколько процентов изменилась средняя цена пшеницы в 2025 году по сравнению с 2024?",
+         sql="WITH p AS (SELECT year, sum(amount_uzs) FILTER (WHERE NOT is_cancelled) / sum(volume) FILTER (WHERE NOT is_cancelled) AS w, avg(unit_price) FILTER (WHERE NOT is_cancelled) AS s FROM deals WHERE product='Пшеница' AND year IN (2024, 2025) GROUP BY year) SELECT a.w AS w_old, b.w AS w_new, round((b.w / a.w - 1) * 100, 2) AS w_change_pct, a.s AS s_old, b.s AS s_new, round((b.s / a.s - 1) * 100, 2) AS s_change_pct, 'UZS' AS currency, 'тонна' AS unit FROM p a, p b WHERE a.year=2024 AND b.year=2025",
+         a="Средневзвешенная цена пшеницы: 2024 — {w_old} {currency}/{unit}, 2025 — {w_new} {currency}/{unit}, изменение {w_change_pct}%. Простая средняя цена: {s_old} → {s_new} {currency}/{unit} ({s_change_pct}%).",
+         n="Изменение = (цена 2025 / цена 2024 − 1) × 100; аннулированные сделки не учитываются."),
+    dict(q="Qancha paxta eksport qilingan va qaysi davlatlarga?",
+         sql="SELECT product, count(*) AS n, count(*) FILTER (WHERE NOT is_cancelled) AS n_valid, sum(volume) FILTER (WHERE NOT is_cancelled) AS vol, any_value(unit) AS unit, sum(amount) FILTER (WHERE NOT is_cancelled) AS total_usd FROM deals WHERE contract_type='Экспортный' AND product IN ('Пряжа хлопчатобумажная', 'Хлопок-сырец') GROUP BY product",
+         a="Reyestrda yuk boriladigan davlat haqida maydon yo‘q, shuning uchun davlatlarni aytib bo‘lmaydi. Paxta bo‘yicha eksport bitimlari faqat ip-kalava (paxta ipi) bo‘yicha bor:",
+         r="{product} — {n} ta bitim ({n_valid} tasi amalga oshgan), {vol} {unit}, {total_usd} USD",
+         n="Paxta xomashyosi faqat ichki bozorda sotilgan; bekor qilingan bitimlar hajm va summaga kiritilmagan."),
 ]
 
 
