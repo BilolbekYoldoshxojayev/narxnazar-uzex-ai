@@ -50,6 +50,6 @@ TELEGRAM_SECRET = os.environ.get("TELEGRAM_SECRET", "uzex-" + (TELEGRAM_TOKEN.sp
 PUBLIC_URL = (os.environ.get("PUBLIC_URL") or os.environ.get("RENDER_EXTERNAL_URL") or "").rstrip("/")
 
 LLM_TIMEOUT = float(os.environ.get("LLM_TIMEOUT", "20"))
-TOTAL_BUDGET = float(os.environ.get("TOTAL_BUDGET", "60"))
+TOTAL_BUDGET = float(os.environ.get("TOTAL_BUDGET", "75"))
 DUAL = os.environ.get("DUAL", "1") == "1"  # run two independent models and cross-check
 SECOND_GRACE = float(os.environ.get("SECOND_GRACE", "12"))  # max wait for the 2nd draft after the 1st is ready

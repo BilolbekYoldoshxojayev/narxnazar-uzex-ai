@@ -47,6 +47,8 @@ STATUSES: 'Новый' concluded on 30.10.2026 | 'Не подписан' not sig
 
 RULES
 1. Filter goods ONLY by `product` (+ sort/klass/marka/size/ptype from HINTS). Never ILIKE product_name.
+ When showing ONE specific deal/contract, return product_name (full registry name with grade/marka) and product.
+ Notes are for the user: never mention column names or SQL internals.
 2. Companies/brokers: use inn/broker_code from HINTS. If a named company is not in HINTS, search
  `name_key ILIKE '%<latin lowercase words>%'` in participants/brokers and return column `_found`=count of matches.
 3. Money: sum across currencies with amount_uzs (UZS). If only USD (export) deals are involved, also give amount (USD).

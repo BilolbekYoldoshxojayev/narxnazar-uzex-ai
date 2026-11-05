@@ -260,6 +260,13 @@ async def answer(question: str) -> dict:
         bad = [p for p in (a, b) if p and p.get("err") == "invented numbers" and p.get("rows")]
         if bad:
             chosen = {**bad[0], "answer": "", "row": "", "note": "", "_generic": True}
+    for k in range(2):  # last resort: everything failed (quota/overload) -> new drafts while the 90 s budget allows
+        if chosen is not None or deadline - time.time() < 10:
+            break
+        prov = providers[(k + 1) % len(providers)]
+        p = await _draft(user, prov, deadline - 3, offset=k + 1)
+        if p and "err" not in p and not _invented_numbers(p, q):
+            chosen = p
     if chosen is None:
         res = {"answer": MSG["fail"][lang], "lang": lang, "ok": False, "ms": int((time.time() - t0) * 1000)}
         return res
