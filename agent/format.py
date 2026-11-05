@@ -9,6 +9,9 @@ MONTHS = {
     "uz": ["yanvar", "fevral", "mart", "aprel", "may", "iyun", "iyul", "avgust", "sentyabr", "oktyabr", "noyabr", "dekabr"],
     "uz_cyr": ["январ", "феврал", "март", "апрел", "май", "июн", "июл", "август", "сентябр", "октябр", "ноябр", "декабр"],
 }
+UNIT_UZ = {"тонна": ("tonna", "тонна"), "килограмм": ("kilogramm", "килограмм"), "литр": ("litr", "литр"),
+           "штука": ("dona", "дона"), "куб.метр": ("kub metr", "куб метр"), "кв.метр": ("kv. metr", "кв. метр"),
+           "метр": ("metr", "метр")}
 BOOL = {"ru": ("Да", "Нет"), "uz": ("Ha", "Yo‘q"), "uz_cyr": ("Ҳа", "Йўқ")}
 
 
@@ -32,6 +35,8 @@ def fmt(v, col: str, lang: str) -> str:
         return BOOL[lang][0 if v else 1]
     if col.lower() == "currency" and v in CUR:
         return CUR[v][lang]
+    if col.lower() == "unit" and lang != "ru" and v in UNIT_UZ:
+        return UNIT_UZ[v][0 if lang == "uz" else 1]
     if isinstance(v, dt.datetime):
         return v.strftime("%d.%m.%Y %H:%M:%S")
     if isinstance(v, dt.date):
